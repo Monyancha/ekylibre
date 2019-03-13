@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 9.6.11
--- Dumped by pg_dump version 9.6.11
+-- Dumped from database version 9.6.12
+-- Dumped by pg_dump version 9.6.12
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1133,6 +1133,18 @@ CREATE SEQUENCE public.analysis_items_id_seq
 --
 
 ALTER SEQUENCE public.analysis_items_id_seq OWNED BY public.analysis_items.id;
+
+
+--
+-- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ar_internal_metadata (
+    key character varying NOT NULL,
+    value character varying,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
 
 
 --
@@ -3066,7 +3078,7 @@ ALTER SEQUENCE public.fixed_asset_depreciations_id_seq OWNED BY public.fixed_ass
 
 CREATE TABLE public.fixed_assets (
     id integer NOT NULL,
-    allocation_account_id integer NOT NULL,
+    allocation_account_id integer,
     journal_id integer NOT NULL,
     name character varying NOT NULL,
     number character varying NOT NULL,
@@ -3080,7 +3092,7 @@ CREATE TABLE public.fixed_assets (
     sale_item_id integer,
     purchase_amount numeric(19,4),
     started_on date NOT NULL,
-    stopped_on date NOT NULL,
+    stopped_on date,
     depreciable_amount numeric(19,4) NOT NULL,
     depreciated_amount numeric(19,4) NOT NULL,
     depreciation_method character varying NOT NULL,
@@ -5677,6 +5689,43 @@ ALTER SEQUENCE public.product_nature_variant_readings_id_seq OWNED BY public.pro
 
 
 --
+-- Name: product_nature_variant_valuings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_nature_variant_valuings (
+    id integer NOT NULL,
+    average_cost_amount numeric(19,4) NOT NULL,
+    amount numeric(19,4) NOT NULL,
+    variant_id integer NOT NULL,
+    computed_at timestamp without time zone NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    creator_id integer,
+    updater_id integer,
+    lock_version integer DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: product_nature_variant_valuings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.product_nature_variant_valuings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: product_nature_variant_valuings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.product_nature_variant_valuings_id_seq OWNED BY public.product_nature_variant_valuings.id;
+
+
+--
 -- Name: product_nature_variants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7804,6 +7853,13 @@ ALTER TABLE ONLY public.product_nature_variant_readings ALTER COLUMN id SET DEFA
 
 
 --
+-- Name: product_nature_variant_valuings id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_nature_variant_valuings ALTER COLUMN id SET DEFAULT nextval('public.product_nature_variant_valuings_id_seq'::regclass);
+
+
+--
 -- Name: product_nature_variants id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -8161,6 +8217,14 @@ ALTER TABLE ONLY public.analyses
 
 ALTER TABLE ONLY public.analysis_items
     ADD CONSTRAINT analysis_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ar_internal_metadata ar_internal_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ar_internal_metadata
+    ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
 
 
 --
@@ -8969,6 +9033,14 @@ ALTER TABLE ONLY public.product_nature_variant_components
 
 ALTER TABLE ONLY public.product_nature_variant_readings
     ADD CONSTRAINT product_nature_variant_readings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_nature_variant_valuings product_nature_variant_valuings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_nature_variant_valuings
+    ADD CONSTRAINT product_nature_variant_valuings_pkey PRIMARY KEY (id);
 
 
 --
@@ -15178,6 +15250,34 @@ CREATE INDEX index_product_nature_variant_readings_on_variant_id ON public.produ
 
 
 --
+-- Name: index_product_nature_variant_valuings_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_nature_variant_valuings_on_created_at ON public.product_nature_variant_valuings USING btree (created_at);
+
+
+--
+-- Name: index_product_nature_variant_valuings_on_creator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_nature_variant_valuings_on_creator_id ON public.product_nature_variant_valuings USING btree (creator_id);
+
+
+--
+-- Name: index_product_nature_variant_valuings_on_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_nature_variant_valuings_on_updated_at ON public.product_nature_variant_valuings USING btree (updated_at);
+
+
+--
+-- Name: index_product_nature_variant_valuings_on_updater_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_nature_variant_valuings_on_updater_id ON public.product_nature_variant_valuings USING btree (updater_id);
+
+
+--
 -- Name: index_product_nature_variants_on_category_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -17276,6 +17376,14 @@ ALTER TABLE ONLY public.outgoing_payments
 
 
 --
+-- Name: product_nature_variant_valuings fk_rails_26288a66e8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_nature_variant_valuings
+    ADD CONSTRAINT fk_rails_26288a66e8 FOREIGN KEY (variant_id) REFERENCES public.product_nature_variants(id);
+
+
+--
 -- Name: journal_entry_items fk_rails_3143e6e260; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -18038,4 +18146,8 @@ INSERT INTO schema_migrations (version) VALUES ('20181123102741');
 INSERT INTO schema_migrations (version) VALUES ('20181126152417');
 
 INSERT INTO schema_migrations (version) VALUES ('20190104105501');
+
+INSERT INTO schema_migrations (version) VALUES ('20190107153344');
+
+INSERT INTO schema_migrations (version) VALUES ('20190313140443');
 

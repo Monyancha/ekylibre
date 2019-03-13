@@ -53,22 +53,25 @@ class FixedAssetDepreciation < Ekylibre::Record::Base
   validates :amount, presence: true, numericality: { greater_than: -1_000_000_000_000_000, less_than: 1_000_000_000_000_000 }
   validates :depreciable_amount, :depreciated_amount, numericality: { greater_than: -1_000_000_000_000_000, less_than: 1_000_000_000_000_000 }, allow_blank: true
   validates :started_on, presence: true, timeliness: { on_or_after: -> { Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }
-  validates :stopped_on, presence: true, timeliness: { on_or_after: ->(fixed_asset_depreciation) { fixed_asset_depreciation.started_on || Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }
+  validates :stopped_on, timeliness: { on_or_after: ->(fixed_asset_depreciation) { fixed_asset_depreciation.started_on || Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }, allow_blank: true
   validates :fixed_asset, presence: true
   # ]VALIDATORS]
+  validates :stopped_on, presence: { unless: Proc.new {|fad| fad.fixed_asset && fad.fixed_asset.depreciation_method.to_s == 'none'} }
   delegate :currency, :number, to: :fixed_asset
 
   scope :with_active_asset, -> { joins(:fixed_asset).where(fixed_assets: { state: :in_use }) }
-  scope :up_to, ->(date) { where('fixed_asset_depreciations.stopped_on <= ?', date) }
+  scope :up_to, ->(date) { where('fixed_asset_depreciations.stopped_on <= ? OR (fixed_asset_depreciations.stopped_on IS NULL AND fixed_asset_depreciations.started_on <= ?)', date, date) }
 
   sums :fixed_asset, :depreciations, amount: :depreciated_amount
 
   bookkeep do |b|
     if fixed_asset.in_use?
-      b.journal_entry(fixed_asset.journal, printed_on: stopped_on.end_of_month, if: accountable && !locked) do |entry|
-        name = tc(:bookkeep, resource: FixedAsset.model_name.human, number: fixed_asset.number, name: fixed_asset.name, position: position, total: fixed_asset.depreciations.count)
-        entry.add_debit(name, fixed_asset.expenses_account, amount)
-        entry.add_credit(name, fixed_asset.allocation_account, amount)
+      unless fixed_asset.depreciation_method.to_s == 'none'
+        b.journal_entry(fixed_asset.journal, printed_on: stopped_on.end_of_month, if: accountable && !locked) do |entry|
+          name = tc(:bookkeep, resource: FixedAsset.model_name.human, number: fixed_asset.number, name: fixed_asset.name, position: position, total: fixed_asset.depreciations.count)
+          entry.add_debit(name, fixed_asset.expenses_account, amount)
+          entry.add_credit(name, fixed_asset.allocation_account, amount)
+        end
       end
     elsif fixed_asset.sold? || fixed_asset.scrapped?
       b.journal_entry(fixed_asset.journal, printed_on: stopped_on.end_of_month, if: accountable && !locked) do |entry|
