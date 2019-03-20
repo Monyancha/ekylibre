@@ -53,14 +53,13 @@ class FixedAssetDepreciation < Ekylibre::Record::Base
   validates :amount, presence: true, numericality: { greater_than: -1_000_000_000_000_000, less_than: 1_000_000_000_000_000 }
   validates :depreciable_amount, :depreciated_amount, numericality: { greater_than: -1_000_000_000_000_000, less_than: 1_000_000_000_000_000 }, allow_blank: true
   validates :started_on, presence: true, timeliness: { on_or_after: -> { Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }
-  validates :stopped_on, timeliness: { on_or_after: ->(fixed_asset_depreciation) { fixed_asset_depreciation.started_on || Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }, allow_blank: true
+  validates :stopped_on, presence: true, timeliness: { on_or_after: ->(fixed_asset_depreciation) { fixed_asset_depreciation.started_on || Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }
   validates :fixed_asset, presence: true
   # ]VALIDATORS]
-  validates :stopped_on, presence: { unless: ->(fad) { fad.fixed_asset&.depreciation_method_none? } }
   delegate :currency, :number, to: :fixed_asset
 
   scope :with_active_asset, -> { joins(:fixed_asset).where(fixed_assets: { state: :in_use }) }
-  scope :up_to, ->(date) { where('fixed_asset_depreciations.stopped_on <= ? OR (fixed_asset_depreciations.stopped_on IS NULL AND fixed_asset_depreciations.started_on <= ?)', date, date) }
+  scope :up_to, ->(date) { where('fixed_asset_depreciations.stopped_on <= ?', date) }
 
   sums :fixed_asset, :depreciations, amount: :depreciated_amount
 
