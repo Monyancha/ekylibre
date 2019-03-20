@@ -56,7 +56,7 @@ class FixedAssetDepreciation < Ekylibre::Record::Base
   validates :stopped_on, timeliness: { on_or_after: ->(fixed_asset_depreciation) { fixed_asset_depreciation.started_on || Time.new(1, 1, 1).in_time_zone }, on_or_before: -> { Time.zone.today + 50.years }, type: :date }, allow_blank: true
   validates :fixed_asset, presence: true
   # ]VALIDATORS]
-  validates :stopped_on, presence: { unless: Proc.new {|fad| fad.fixed_asset && fad.fixed_asset.depreciation_method.to_s == 'none'} }
+  validates :stopped_on, presence: { unless: ->(fad) { fad.fixed_asset&.depreciation_method_none? } }
   delegate :currency, :number, to: :fixed_asset
 
   scope :with_active_asset, -> { joins(:fixed_asset).where(fixed_assets: { state: :in_use }) }
@@ -66,7 +66,7 @@ class FixedAssetDepreciation < Ekylibre::Record::Base
 
   bookkeep do |b|
     if fixed_asset.in_use?
-      unless fixed_asset.depreciation_method.to_s == 'none'
+      unless fixed_asset.depreciation_method_none?
         b.journal_entry(fixed_asset.journal, printed_on: stopped_on.end_of_month, if: accountable && !locked) do |entry|
           name = tc(:bookkeep, resource: FixedAsset.model_name.human, number: fixed_asset.number, name: fixed_asset.name, position: position, total: fixed_asset.depreciations.count)
           entry.add_debit(name, fixed_asset.expenses_account, amount)

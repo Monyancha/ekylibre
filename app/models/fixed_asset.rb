@@ -105,7 +105,7 @@ class FixedAsset < Ekylibre::Record::Base
   validates :currency, match: { with: :journal, to_invalidate: :journal }
   validates :depreciation_fiscal_coefficient, presence: true, if: -> { depreciation_method_regressive? }
   validates :started_on, financial_year_writeable: true, allow_blank: true
-  validates :stopped_on, :allocation_account, :expenses_account, presence: { unless: Proc.new { |fa| fa.depreciation_method.to_s == 'none' } }
+  validates :stopped_on, :allocation_account, :expenses_account, presence: { unless: ->(fa) { fa.depreciation_method_none? } }
 
   enumerize :depreciation_period, in: %i[monthly quarterly yearly], default: -> { Preference.get(:default_depreciation_period).value || Preference.set!(:default_depreciation_period, :yearly, :string) }
 
@@ -377,7 +377,7 @@ class FixedAsset < Ekylibre::Record::Base
   def depreciate!
     planned_depreciations.clear
 
-    unless depreciation_method.to_s == 'none'
+    unless depreciation_method_none?
       # Computes periods
       starts = [started_on, self.stopped_on + 1]
       starts += depreciations.pluck(:started_on)
