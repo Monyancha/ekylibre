@@ -31,13 +31,19 @@ class DepreciationCalculator
                return nil
              end
 
-    groups.map { |_, v| ([v.first.first, v.last.second, v.map(&:third).reduce(&:+)]) }
+    groups.map do |_, v|
+      first_period_start = v.first.first
+      last_period_end = v.last.second
+      period_duration = v.map(&:third).reduce(&:+)
+
+      [first_period_start, last_period_end, period_duration]
+    end
   end
 
   def monthly_periods(started_on, yearly_percentage)
-    return if(yearly_percentage == 0)
+    return if yearly_percentage == 0
 
-    depreciation_duration = 100 / yearly_percentage * 360 # in days
+    depreciation_duration = 100 / yearly_percentage.to_f * 360 # in days
 
     months = []
     current = started_on

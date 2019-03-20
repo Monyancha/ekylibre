@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class FinancialYearCloseTest < ActiveSupport::TestCase
+class DepreciationCalculatorTest < ActiveSupport::TestCase
   setup do
     FinancialYear.delete_all
   end
